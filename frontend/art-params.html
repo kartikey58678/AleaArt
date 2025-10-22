@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AleaArt - Generative Art Parameters</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: white;
+        }
+        
+        .container {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+        
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        
+        .section {
+            margin-bottom: 30px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .section h2 {
+            margin-top: 0;
+            color: #ffd700;
+            font-size: 1.5em;
+        }
+        
+        button {
+            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            margin: 10px 5px;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+        }
+        
+        button:disabled {
+            background: #666;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .status {
+            padding: 15px;
+            border-radius: 10px;
+            margin: 10px 0;
+            font-weight: bold;
+        }
+        
+        .status.success {
+            background: rgba(46, 204, 113, 0.3);
+            border: 1px solid #2ecc71;
+        }
+        
+        .status.error {
+            background: rgba(231, 76, 60, 0.3);
+            border: 1px solid #e74c3c;
+        }
+        
+        .status.info {
+            background: rgba(52, 152, 219, 0.3);
+            border: 1px solid #3498db;
+        }
+        
+        .param-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .param-card {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            text-align: center;
+        }
+        
+        .param-value {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #ffd700;
+            margin-bottom: 5px;
+        }
+        
+        .param-label {
+            font-size: 0.9em;
+            opacity: 0.8;
+        }
+        
+        .contract-info {
+            background: rgba(0, 0, 0, 0.2);
+            padding: 15px;
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+        }
+        
+        .token-card {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 15px;
+            margin: 15px 0;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .token-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .token-id {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #ffd700;
+        }
+        
+        .token-status {
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            font-weight: bold;
+        }
+        
+        .status-ready {
+            background: rgba(46, 204, 113, 0.3);
+            color: #2ecc71;
+        }
+        
+        .status-pending {
+            background: rgba(255, 193, 7, 0.3);
+            color: #ffc107;
+        }
+        
+        .art-preview {
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4, #45b7d1, #96ceb4, #feca57);
+            background-size: 300% 300%;
+            animation: gradientShift 3s ease infinite;
+            height: 200px;
+            border-radius: 15px;
+            margin: 20px 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2em;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        }
+        
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎨 AleaArt - Generative Art Parameters</h1>
+        
+        <div class="section">
+            <h2>🔗 Connect Wallet</h2>
+            <button id="connectBtn">Connect MetaMask</button>
+            <div id="walletStatus" class="status info" style="display: none;">
+                Connected: <span id="walletAddress"></span>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2>📋 Contract Information</h2>
+            <div class="contract-info">
+                <strong>Contract Address:</strong> 0x420D121aE08007Ef0A66E67D5D7BfFdC98AbECF0<br>
+                <strong>Network:</strong> Arbitrum Sepolia<br>
+                <strong>Entropy Address:</strong> 0x549Ebba8036Ab746611B4fFA1423eb0A4Df61440<br>
+                <strong>Collection Salt:</strong> 0x7d0293489313c8b010a0b94fadf33237ae4b7f212d87b2b69753426aa1179b27
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2>🎯 Generate Art Parameters</h2>
+            <button id="requestArtBtn" disabled>Request Art Parameters</button>
+            <button id="checkArtBtn" disabled>Check Art Parameters</button>
+            
+            <div id="artStatus" class="status info" style="display: none;"></div>
+            
+            <div id="artResults" style="display: none;">
+                <h3>🎨 Generated Art Parameters:</h3>
+                <div id="artTokens"></div>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2>💰 Get Required Fee</h2>
+            <button id="getFeeBtn" disabled>Get Required Fee</button>
+            <div id="feeInfo" class="status info" style="display: none;"></div>
+        </div>
+        
+        <div class="section">
+            <h2>🎲 Art Preview</h2>
+            <div class="art-preview" id="artPreview">
+                Connect wallet and generate parameters to see art preview
+            </div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+    <script>
+        // Wait for ethers to load with timeout
+        let ethersLoaded = false;
+        
+        // Check if ethers loaded immediately
+        if (typeof ethers !== 'undefined') {
+            ethersLoaded = true;
+            console.log('Ethers library loaded immediately');
+            initializeApp();
+        } else {
+            // Wait for load event
+            window.addEventListener('load', () => {
+                setTimeout(() => {
+                    if (typeof ethers !== 'undefined') {
+                        ethersLoaded = true;
+                        console.log('Ethers library loaded after timeout');
+                        initializeApp();
+                    } else {
+                        console.error('Ethers library failed to load');
+                        document.body.innerHTML = `
+                            <div style="text-align: center; padding: 50px; color: white;">
+                                <h1>❌ Error: Ethers library failed to load</h1>
+                                <p>Please try one of these solutions:</p>
+                                <ul style="text-align: left; max-width: 500px; margin: 0 auto;">
+                                    <li>Refresh the page (Ctrl+F5)</li>
+                                    <li>Check your internet connection</li>
+                                    <li>Try opening in a different browser</li>
+                                    <li>Disable ad blockers temporarily</li>
+                                </ul>
+                                <button onclick="location.reload()" style="margin-top: 20px; padding: 10px 20px; background: #ff6b6b; color: white; border: none; border-radius: 5px; cursor: pointer;">Refresh Page</button>
+                            </div>
+                        `;
+                    }
+                }, 2000); // Wait 2 seconds
+            });
+        }
+        
+        function initializeApp() {
+            // Contract configuration
+            const CONTRACT_ADDRESS = '0x420D121aE08007Ef0A66E67D5D7BfFdC98AbECF0';
+            const ARBITRUM_SEPOLIA_CHAIN_ID = '0x66eee'; // 421614 in hex
+            
+            // Contract ABI (simplified for art parameters)
+            const CONTRACT_ABI = [
+                "function requestArtParams() external payable returns (uint256 tokenId, uint64 requestId)",
+                "function viewRenderParams(uint256 tokenId) external view returns (tuple(uint8 promptIndex, uint8 styleIndex, uint8 samplerIndex, uint8 aspectIndex, uint16 steps, uint16 cfg, uint32 latentSeed, uint16 paletteId))",
+                "function tokenSeed(uint256 tokenId) external view returns (bytes32)",
+                "function nextTokenId() external view returns (uint256)",
+                "event EntropyRequested(uint256 indexed tokenId, uint64 indexed requestId, uint256 feePaid)",
+                "event EntropyFulfilled(uint256 indexed tokenId, bytes32 seed)"
+            ];
+            
+            let provider, signer, contract;
+            let currentTokenId = null;
+            let currentRequestId = null;
+            
+            // Initialize when page loads
+            if (typeof window.ethereum !== 'undefined') {
+                provider = new ethers.providers.Web3Provider(window.ethereum);
+                contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, provider);
+                
+                // Check if already connected
+                window.ethereum.request({ method: 'eth_accounts' }).then(accounts => {
+                    if (accounts.length > 0) {
+                        connectWallet();
+                    }
+                }).catch(console.error);
+            } else {
+                showStatus('walletStatus', 'error', 'MetaMask not detected. Please install MetaMask to use this app.');
+            }
+            
+            // Connect wallet
+            document.getElementById('connectBtn').addEventListener('click', connectWallet);
+            
+            // Get required fee
+            document.getElementById('getFeeBtn').addEventListener('click', async () => {
+                try {
+                    showStatus('feeInfo', 'info', 'Getting fee...');
+                    // Note: quoteEntropyFee is not in our simplified ABI, so we'll estimate
+                    showStatus('feeInfo', 'success', 'Estimated fee: ~0.0004 ETH (varies by network conditions)');
+                } catch (error) {
+                    showStatus('feeInfo', 'error', `Failed to get fee: ${error.message}`);
+                }
+            });
+            
+            // Request art parameters
+            document.getElementById('requestArtBtn').addEventListener('click', async () => {
+                try {
+                    showStatus('artStatus', 'info', 'Requesting art parameters...');
+                    
+                    // Request art parameters with estimated fee + gas
+                    const totalValue = ethers.utils.parseEther("0.001"); // Conservative estimate
+                    
+                    const tx = await contract.requestArtParams({ value: totalValue });
+                    showStatus('artStatus', 'info', `Transaction sent: ${tx.hash}`);
+                    
+                    // Wait for transaction
+                    const receipt = await tx.wait();
+                    
+                    // Get token ID and request ID from event
+                    const event = receipt.events.find(e => e.event === 'EntropyRequested');
+                    if (event) {
+                        currentTokenId = event.args.tokenId.toString();
+                        currentRequestId = event.args.requestId.toString();
+                        showStatus('artStatus', 'success', `Art parameters requested! Token ID: ${currentTokenId}`);
+                        
+                        // Add pending token to display
+                        addTokenCard(currentTokenId, null, 'pending');
+                    }
+                    
+                } catch (error) {
+                    showStatus('artStatus', 'error', `Request failed: ${error.message}`);
+                }
+            });
+            
+            // Check art parameters
+            document.getElementById('checkArtBtn').addEventListener('click', async () => {
+                try {
+                    if (!currentTokenId) {
+                        showStatus('artStatus', 'error', 'No token ID available. Request art parameters first.');
+                        return;
+                    }
+                    
+                    showStatus('artStatus', 'info', 'Checking for art parameters...');
+                    
+                    const params = await contract.viewRenderParams(currentTokenId);
+                    
+                    showStatus('artStatus', 'success', 'Art parameters generated!');
+                    
+                    // Display the parameters
+                    displayArtParameters(currentTokenId, params);
+                    
+                    // Update token card
+                    updateTokenCard(currentTokenId, params, 'ready');
+                    
+                } catch (error) {
+                    if (error.message.includes('not ready')) {
+                        showStatus('artStatus', 'info', 'Art parameters not yet generated. This may take some time...');
+                    } else {
+                        showStatus('artStatus', 'error', `Check failed: ${error.message}`);
+                    }
+                }
+            });
+            
+            async function connectWallet() {
+                try {
+                    // Request account access
+                    await window.ethereum.request({ method: 'eth_requestAccounts' });
+                    
+                    // Get signer
+                    signer = provider.getSigner();
+                    const address = await signer.getAddress();
+                    
+                    // Check network
+                    const network = await provider.getNetwork();
+                    if (network.chainId !== 421614) {
+                        await switchToArbitrumSepolia();
+                    }
+                    
+                    // Update contract with signer
+                    contract = contract.connect(signer);
+                    
+                    // Show connected status
+                    document.getElementById('walletAddress').textContent = address;
+                    showStatus('walletStatus', 'success', `Connected: ${address}`);
+                    
+                    // Enable buttons
+                    document.getElementById('requestArtBtn').disabled = false;
+                    document.getElementById('checkArtBtn').disabled = false;
+                    document.getElementById('getFeeBtn').disabled = false;
+                    
+                } catch (error) {
+                    showStatus('walletStatus', 'error', `Connection failed: ${error.message}`);
+                }
+            }
+            
+            async function switchToArbitrumSepolia() {
+                try {
+                    await window.ethereum.request({
+                        method: 'wallet_switchEthereumChain',
+                        params: [{ chainId: ARBITRUM_SEPOLIA_CHAIN_ID }],
+                    });
+                } catch (switchError) {
+                    // If network doesn't exist, add it
+                    if (switchError.code === 4902) {
+                        try {
+                            await window.ethereum.request({
+                                method: 'wallet_addEthereumChain',
+                                params: [{
+                                    chainId: ARBITRUM_SEPOLIA_CHAIN_ID,
+                                    chainName: 'Arbitrum Sepolia',
+                                    rpcUrls: ['https://sepolia-rollup.arbitrum.io/rpc'],
+                                    nativeCurrency: {
+                                        name: 'ETH',
+                                        symbol: 'ETH',
+                                        decimals: 18
+                                    },
+                                    blockExplorerUrls: ['https://sepolia.arbiscan.io/']
+                                }],
+                            });
+                        } catch (addError) {
+                            throw new Error('Failed to add Arbitrum Sepolia network');
+                        }
+                    } else {
+                        throw switchError;
+                    }
+                }
+            }
+            
+            function displayArtParameters(tokenId, params) {
+                const artPreview = document.getElementById('artPreview');
+                artPreview.innerHTML = `
+                    <div style="text-align: center;">
+                        <div style="font-size: 1.5em; margin-bottom: 10px;">Token #${tokenId}</div>
+                        <div style="font-size: 1em;">Art Parameters Generated!</div>
+                    </div>
+                `;
+                
+                // Create parameter display
+                const paramGrid = document.createElement('div');
+                paramGrid.className = 'param-grid';
+                
+                const paramData = [
+                    { label: 'Prompt Index', value: params.promptIndex.toString(), desc: 'Out of 12 prompts' },
+                    { label: 'Style Index', value: params.styleIndex.toString(), desc: 'Out of 10 styles' },
+                    { label: 'Sampler Index', value: params.samplerIndex.toString(), desc: 'Out of 6 samplers' },
+                    { label: 'Aspect Index', value: params.aspectIndex.toString(), desc: 'Out of 5 ratios' },
+                    { label: 'Steps', value: params.steps.toString(), desc: 'Rendering steps' },
+                    { label: 'CFG Scale', value: (params.cfg / 10).toFixed(1), desc: 'Guidance scale' },
+                    { label: 'Latent Seed', value: params.latentSeed.toString(), desc: 'Latent space seed' },
+                    { label: 'Palette ID', value: params.paletteId.toString(), desc: 'Out of 24 palettes' }
+                ];
+                
+                paramData.forEach(param => {
+                    const card = document.createElement('div');
+                    card.className = 'param-card';
+                    card.innerHTML = `
+                        <div class="param-value">${param.value}</div>
+                        <div class="param-label">${param.label}</div>
+                        <div class="param-label" style="font-size: 0.8em; opacity: 0.6;">${param.desc}</div>
+                    `;
+                    paramGrid.appendChild(card);
+                });
+                
+                // Add to results
+                const resultsDiv = document.getElementById('artTokens');
+                const tokenDiv = document.createElement('div');
+                tokenDiv.className = 'token-card';
+                tokenDiv.innerHTML = `
+                    <div class="token-header">
+                        <div class="token-id">Token #${tokenId}</div>
+                        <div class="token-status status-ready">Ready</div>
+                    </div>
+                `;
+                tokenDiv.appendChild(paramGrid);
+                resultsDiv.appendChild(tokenDiv);
+                
+                document.getElementById('artResults').style.display = 'block';
+            }
+            
+            function addTokenCard(tokenId, params, status) {
+                const resultsDiv = document.getElementById('artTokens');
+                const tokenDiv = document.createElement('div');
+                tokenDiv.className = 'token-card';
+                tokenDiv.id = `token-${tokenId}`;
+                
+                const statusClass = status === 'ready' ? 'status-ready' : 'status-pending';
+                const statusText = status === 'ready' ? 'Ready' : 'Pending';
+                
+                tokenDiv.innerHTML = `
+                    <div class="token-header">
+                        <div class="token-id">Token #${tokenId}</div>
+                        <div class="token-status ${statusClass}">${statusText}</div>
+                    </div>
+                    ${status === 'pending' ? '<div style="text-align: center; padding: 20px;">Waiting for art parameters...</div>' : ''}
+                `;
+                
+                resultsDiv.appendChild(tokenDiv);
+                document.getElementById('artResults').style.display = 'block';
+            }
+            
+            function updateTokenCard(tokenId, params, status) {
+                const tokenDiv = document.getElementById(`token-${tokenId}`);
+                if (tokenDiv) {
+                    const statusElement = tokenDiv.querySelector('.token-status');
+                    statusElement.className = `token-status status-ready`;
+                    statusElement.textContent = 'Ready';
+                    
+                    // Add parameters to the card
+                    const paramGrid = document.createElement('div');
+                    paramGrid.className = 'param-grid';
+                    
+                    const paramData = [
+                        { label: 'Prompt Index', value: params.promptIndex.toString(), desc: 'Out of 12 prompts' },
+                        { label: 'Style Index', value: params.styleIndex.toString(), desc: 'Out of 10 styles' },
+                        { label: 'Sampler Index', value: params.samplerIndex.toString(), desc: 'Out of 6 samplers' },
+                        { label: 'Aspect Index', value: params.aspectIndex.toString(), desc: 'Out of 5 ratios' },
+                        { label: 'Steps', value: params.steps.toString(), desc: 'Rendering steps' },
+                        { label: 'CFG Scale', value: (params.cfg / 10).toFixed(1), desc: 'Guidance scale' },
+                        { label: 'Latent Seed', value: params.latentSeed.toString(), desc: 'Latent space seed' },
+                        { label: 'Palette ID', value: params.paletteId.toString(), desc: 'Out of 24 palettes' }
+                    ];
+                    
+                    paramData.forEach(param => {
+                        const card = document.createElement('div');
+                        card.className = 'param-card';
+                        card.innerHTML = `
+                            <div class="param-value">${param.value}</div>
+                            <div class="param-label">${param.label}</div>
+                            <div class="param-label" style="font-size: 0.8em; opacity: 0.6;">${param.desc}</div>
+                        `;
+                        paramGrid.appendChild(card);
+                    });
+                    
+                    tokenDiv.appendChild(paramGrid);
+                }
+            }
+            
+            function showStatus(elementId, type, message) {
+                const element = document.getElementById(elementId);
+                element.className = `status ${type}`;
+                element.textContent = message;
+                element.style.display = 'block';
+            }
+        }
+    </script>
+</body>
+</html>
