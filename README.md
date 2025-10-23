@@ -1,57 +1,55 @@
-# Sample Hardhat 3 Beta Project (`mocha` and `ethers`)
+# AleaArt - Blockchain-Powered Generative Art Platform
 
-This project showcases a Hardhat 3 Beta project using `mocha` for tests and the `ethers` library for Ethereum interactions.
+AleaArt is a decentralized platform that generates unique art parameters using on-chain randomness from Pyth Entropy, then creates AI-generated images using Stable Diffusion. Each art piece is truly unique and verifiable on the blockchain.
 
-To learn more about the Hardhat 3 Beta, please visit the [Getting Started guide](https://hardhat.org/docs/getting-started#getting-started-with-hardhat-3). To share your feedback, join our [Hardhat 3 Beta](https://hardhat.org/hardhat3-beta-telegram-group) Telegram group or [open an issue](https://github.com/NomicFoundation/hardhat/issues/new) in our GitHub issue tracker.
+## 🎨 Key Features
 
-## Project Overview
+- **On-Chain Randomness**: Uses Pyth Entropy V2 for verifiable, tamper-proof randomness
+- **Generative Art Parameters**: Converts randomness into detailed art generation parameters
+- **AI Image Generation**: Creates stunning images using Stable Diffusion models
+- **User Authentication**: Secure login/signup with NextAuth.js
+- **Wallet Integration**: MetaMask connection for blockchain interactions
+- **Image Gallery**: Personal gallery to view and manage generated artwork
+- **Real-time Generation**: Asynchronous image generation with status tracking
 
-This example project includes:
+## 🔗 Smart Contracts
 
-- A simple Hardhat configuration file.
-- Foundry-compatible Solidity unit tests.
-- TypeScript integration tests using `mocha` and ethers.js
-- Examples demonstrating how to connect to different types of networks, including locally simulating OP mainnet.
+### EntropyArtParamsV2 Contract
 
-## Usage
+The core contract that leverages **Pyth Entropy V2** to generate deterministic art parameters:
 
-### Running Tests
+- **Network**: Arbitrum Sepolia
+- **Entropy Provider**: Pyth Network's decentralized randomness
+- **Functionality**: 
+  - Requests verifiable randomness from Pyth Entropy
+  - Converts randomness into art generation parameters (prompt, style, sampler, etc.)
+  - Stores parameters on-chain for permanent verification
+  - Emits events for frontend integration
 
-To run all the tests in the project, execute the following command:
+### How Pyth Entropy Works
 
-```shell
-npx hardhat test
-```
+1. **Randomness Request**: Contract requests randomness from Pyth's decentralized network
+2. **Callback Mechanism**: Pyth calls back with verifiable random data
+3. **Parameter Generation**: Randomness is converted into art parameters:
+   - Prompt templates (12 different styles)
+   - Style modifiers (10 artistic styles)
+   - Technical parameters (steps, CFG scale, aspect ratio)
+   - Unique seeds for reproducibility
 
-You can also selectively run the Solidity or `mocha` tests:
+## 🏗️ Architecture
 
-```shell
-npx hardhat test solidity
-npx hardhat test mocha
-```
+- **Frontend**: Next.js with TypeScript and Tailwind CSS
+- **Backend**: Python Flask with Stable Diffusion integration
+- **Database**: MongoDB for user data and generated images
+- **Blockchain**: Arbitrum Sepolia testnet
+- **Authentication**: NextAuth.js with JWT tokens
+- **Image Storage**: Base64 encoding in MongoDB
 
-### Make a deployment to Sepolia
+## 🚀 Technology Stack
 
-This project includes an example Ignition module to deploy the contract. You can deploy this module to a locally simulated chain or to Sepolia.
-
-To run the deployment to a local chain:
-
-```shell
-npx hardhat ignition deploy ignition/modules/Counter.ts
-```
-
-To run the deployment to Sepolia, you need an account with funds to send the transaction. The provided Hardhat configuration includes a Configuration Variable called `SEPOLIA_PRIVATE_KEY`, which you can use to set the private key of the account you want to use.
-
-You can set the `SEPOLIA_PRIVATE_KEY` variable using the `hardhat-keystore` plugin or by setting it as an environment variable.
-
-To set the `SEPOLIA_PRIVATE_KEY` config variable using `hardhat-keystore`:
-
-```shell
-npx hardhat keystore set SEPOLIA_PRIVATE_KEY
-```
-
-After setting the variable, you can run the deployment with the Sepolia network:
-
-```shell
-npx hardhat ignition deploy --network sepolia ignition/modules/Counter.ts
-```
+- **Blockchain**: Solidity, Hardhat, Ethers.js
+- **Frontend**: Next.js, React, TypeScript, Tailwind CSS
+- **Backend**: Python, Flask, Stable Diffusion, PyTorch
+- **Database**: MongoDB, Mongoose
+- **Authentication**: NextAuth.js
+- **Randomness**: Pyth Entropy V2 SDK
