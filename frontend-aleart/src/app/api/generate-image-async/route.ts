@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if image already exists for this token
-    const existingImage = user.generatedImages.find(img => img.tokenId === tokenId);
+    const existingImage = user.generatedImages.find((img: any) => img.tokenId === tokenId);
     if (existingImage && existingImage.status === 'completed') {
       return NextResponse.json({
         success: true,
@@ -188,17 +188,21 @@ async function generateImageAsync(userId: string, tokenId: number, pythonRequest
     console.log(`Python backend response for token ${tokenId}:`, result.success ? 'Success' : 'Failed');
 
     if (result.success) {
-      // Update the image entry in MongoDB
+      // Update the image entry in MongoDB with IPFS data
       await connectDB();
       const user = await UserAleart.findById(userId);
       
       if (user) {
-        const imageEntry = user.generatedImages.find(img => img.tokenId === tokenId);
+        const imageEntry = user.generatedImages.find((img: any) => img.tokenId === tokenId);
         if (imageEntry) {
-          imageEntry.imageData = result.imageBase64;
+          // Update with IPFS data instead of base64
+          imageEntry.ipfsHash = result.ipfsHash;
+          imageEntry.ipfsUrl = result.ipfsUrl;
+          imageEntry.imageData = result.imageBase64; // Keep base64 as fallback
           imageEntry.status = 'completed';
           await user.save();
           console.log(`✅ Image generation completed and saved for token ${tokenId}`);
+          console.log(`🌐 IPFS URL: ${result.ipfsUrl}`);
         } else {
           console.log(`❌ Image entry not found for token ${tokenId}`);
         }
@@ -217,7 +221,7 @@ async function generateImageAsync(userId: string, tokenId: number, pythonRequest
       const user = await UserAleart.findById(userId);
       
       if (user) {
-        const imageEntry = user.generatedImages.find(img => img.tokenId === tokenId);
+        const imageEntry = user.generatedImages.find((img: any) => img.tokenId === tokenId);
         if (imageEntry) {
           imageEntry.status = 'failed';
           await user.save();

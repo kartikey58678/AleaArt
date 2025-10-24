@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { BrowserProvider, Contract, parseEther } from 'ethers';
+import { BrowserProvider, Contract, parseEther, ethers } from 'ethers';
 import { ArtToken } from '@/types';
 
 // Extend Window interface to include ethereum
@@ -264,10 +264,14 @@ export default function DashboardPage() {
     imageData: string;
     prompt: string;
     createdAt: string;
+    ipfsHash?: string;
+    ipfsUrl?: string;
   }[]>([]);
   const [loadingImages, setLoadingImages] = useState(false);
+  const [mintingNFT, setMintingNFT] = useState<number | null>(null);
 
   const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS || '0x420D121aE08007Ef0A66E67D5D7BfFdC98AbECF0';
+  const NFT_CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_NFT_CONTRACT_ADDRESS || '0x806019F8a33A01a4A3fea93320601cC77B6Dcb79';
   const CONTRACT_ABI = [
     "function requestArtParams() external payable returns (uint256 tokenId, uint64 requestId)",
     "function viewRenderParams(uint256 tokenId) external view returns (tuple(uint8 promptIndex, uint8 styleIndex, uint8 samplerIndex, uint8 aspectIndex, uint16 steps, uint16 cfg, uint32 latentSeed, uint16 paletteId))",
@@ -366,6 +370,90 @@ export default function DashboardPage() {
     }
   };
 
+  const mintNFT = async (image: any) => {
+    try {
+      setMintingNFT(image.tokenId);
+      
+      // Get user's wallet address
+      if (!window.ethereum) {
+        alert('Please install MetaMask!');
+        return;
+      }
+
+      const provider = new BrowserProvider(window.ethereum);
+      const signer = await provider.getSigner();
+      const userAddress = await signer.getAddress();
+
+      // Get price from user
+      const price = prompt('Enter price in ETH (0 for not for sale):', '0');
+      if (price === null) return;
+
+      const priceInWei = parseFloat(price) * 1e18;
+
+      // Get transaction data from API
+      const response = await fetch('/api/mint-nft', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          tokenId: image.tokenId,
+          ipfsHash: image.ipfsHash,
+          prompt: image.prompt,
+          price: priceInWei.toString(),
+          userAddress: userAddress,
+        }),
+      });
+
+      const data = await response.json();
+      
+      if (!data.success) {
+        alert(`Failed to prepare mint transaction: ${data.error}`);
+        return;
+      }
+
+      // Create contract instance with user's signer
+      const contract = new ethers.Contract(data.contractAddress, data.contractABI, signer);
+      
+      // Call the mintNFT function directly with user's wallet
+      const tx = await contract.mintNFT(...data.functionArgs);
+      
+      console.log('Minting transaction sent:', tx.hash);
+      
+      // Wait for transaction confirmation
+      const receipt = await tx.wait();
+      
+      console.log('Transaction confirmed:', receipt);
+      
+      // Get the token ID from the transaction logs
+      const mintEvent = receipt.logs.find((log: any) => {
+        try {
+          const parsed = contract.interface.parseLog(log);
+          return parsed?.name === 'NFTMinted';
+        } catch {
+          return false;
+        }
+      });
+      
+      let mintedTokenId = image.tokenId; // fallback
+      
+      if (mintEvent) {
+        const parsed = contract.interface.parseLog(mintEvent);
+        if (parsed) {
+          mintedTokenId = parsed.args.tokenId.toString();
+        }
+      }
+
+      alert(`NFT minted successfully! Token ID: ${mintedTokenId}\nTransaction: ${tx.hash}`);
+      
+    } catch (error) {
+      console.error('Error minting NFT:', error);
+      alert('Error minting NFT. Please try again.');
+    } finally {
+      setMintingNFT(null);
+    }
+  };
+
   const connectWallet = async () => {
     try {
       if (typeof window.ethereum === 'undefined') {
@@ -374,9 +462,35 @@ export default function DashboardPage() {
       }
 
       console.log('Connecting to MetaMask...');
-      const provider = new BrowserProvider(window.ethereum!);
       
       // Request account access
+      await window.ethereum.request({ method: 'eth_requestAccounts' });
+      
+      // Switch to Arbitrum Sepolia network
+      try {
+        await window.ethereum.request({
+          method: 'wallet_switchEthereumChain',
+          params: [{ chainId: '0x66eee' }], // Arbitrum Sepolia chain ID
+        });
+      } catch (switchError) {
+        // If the network doesn't exist, add it
+        await window.ethereum.request({
+          method: 'wallet_addEthereumChain',
+          params: [{
+            chainId: '0x66eee',
+            chainName: 'Arbitrum Sepolia',
+            rpcUrls: ['https://arbitrum-sepolia-rpc.publicnode.com'],
+            nativeCurrency: {
+              name: 'ETH',
+              symbol: 'ETH',
+              decimals: 18,
+            },
+            blockExplorerUrls: ['https://sepolia.arbiscan.io/'],
+          }],
+        });
+      }
+      
+      const provider = new BrowserProvider(window.ethereum!);
       const accounts = await provider.send('eth_requestAccounts', []);
       console.log('Accounts:', accounts);
       
@@ -645,8 +759,17 @@ export default function DashboardPage() {
     <div className="min-h-screen bg-gradient-to-br from-purple-600 via-blue-600 to-indigo-800">
       <div className="container mx-auto px-4 py-8">
         <div className="flex justify-between items-center mb-8">
-          <h1 className="text-4xl font-bold text-white">🎨 AleaArt Dashboard</h1>
+          <div>
+            <h1 className="text-4xl font-bold text-white mb-2">🎨 AleaArt Dashboard</h1>
+            <p className="text-blue-200">Generate unique art with blockchain randomness</p>
+          </div>
           <div className="flex items-center gap-4">
+            <button
+              onClick={() => router.push('/marketplace')}
+              className="bg-gradient-to-r from-green-500 to-blue-500 text-white px-4 py-2 rounded-lg hover:from-green-600 hover:to-blue-600 transition-all duration-200 font-medium"
+            >
+              🛒 Marketplace
+            </button>
             <span className="text-white">Welcome, {session?.user?.name}</span>
             <button
               onClick={() => signOut()}
@@ -826,7 +949,7 @@ export default function DashboardPage() {
                 <div key={index} className="bg-gray-800/50 rounded-lg p-4 border border-white/20">
                   <div className="aspect-square mb-3">
                     <img
-                      src={image.imageData.startsWith('data:') ? image.imageData : `data:image/png;base64,${image.imageData}`}
+                      src={image.ipfsUrl || (image.imageData?.startsWith('data:') ? image.imageData : `data:image/png;base64,${image.imageData}`)}
                       alt={`Generated art for token ${image.tokenId}`}
                       className="w-full h-full object-cover rounded-lg"
                     />
@@ -839,6 +962,13 @@ export default function DashboardPage() {
                     <div className="text-gray-400 text-xs mt-1 truncate">
                       {image.prompt}
                     </div>
+                    <button
+                      onClick={() => mintNFT(image)}
+                      disabled={mintingNFT === image.tokenId}
+                      className="mt-3 w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white px-4 py-2 rounded-lg hover:from-purple-600 hover:to-pink-600 transition-all duration-200 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {mintingNFT === image.tokenId ? '⏳ Minting...' : '🎨 Mint as NFT'}
+                    </button>
                   </div>
                 </div>
               ))}

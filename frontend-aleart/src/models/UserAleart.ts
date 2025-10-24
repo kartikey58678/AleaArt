@@ -3,6 +3,8 @@ import mongoose, { Document, Schema } from 'mongoose';
 export interface IGeneratedImage {
   tokenId: number;
   imageData?: string; // Make optional for initial creation
+  ipfsHash?: string; // IPFS content hash
+  ipfsUrl?: string; // IPFS gateway URL
   prompt: string;
   parameters: {
     steps: number;
@@ -35,6 +37,8 @@ export interface IArtToken {
 const GeneratedImageSchema = new Schema<IGeneratedImage>({
   tokenId: { type: Number, required: true },
   imageData: { type: String, required: false }, // Make optional for initial creation
+  ipfsHash: { type: String, required: false }, // IPFS content hash
+  ipfsUrl: { type: String, required: false }, // IPFS gateway URL
   prompt: { type: String, required: true },
   parameters: {
     steps: { type: Number, required: true },

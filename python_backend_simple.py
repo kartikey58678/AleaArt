@@ -15,6 +15,8 @@ import io
 import base64
 import pymongo
 from datetime import datetime
+import requests
+import json
 
 app = Flask(__name__)
 CORS(app)
@@ -23,16 +25,25 @@ CORS(app)
 pipe = None
 model_id = "runwayml/stable-diffusion-v1-5"
 
-# MongoDB connection
+# MongoDB connection (for metadata only)
 mongo_client = None
 db = None
+
+# Pinata IPFS configuration
+PINATA_API_KEY = os.getenv('PINATA_API_KEY')
+PINATA_API_SECRET = os.getenv('PINATA_API_SECRET')
+PINATA_JWT = os.getenv('PINATA_JWT')
 
 def connect_mongodb():
     """Connect to MongoDB"""
     global mongo_client, db
     try:
-        # MongoDB connection string - you'll need to set this in your environment
-        mongodb_uri = os.getenv('MONGODB_URI', 'mongodb+srv://jatinsinha03:admin@cluster0.5enu7dl.mongodb.net/?retryWrites=true&w=majority')
+        # MongoDB connection string from environment variable
+        mongodb_uri = os.getenv('MONGODB_URI')
+        if not mongodb_uri:
+            print("❌ MONGODB_URI environment variable not set")
+            return False
+            
         mongo_client = pymongo.MongoClient(mongodb_uri)
         db = mongo_client['aleart']
         print("✅ Connected to MongoDB")
@@ -40,6 +51,56 @@ def connect_mongodb():
     except Exception as e:
         print(f"❌ Failed to connect to MongoDB: {e}")
         return False
+
+def upload_to_pinata(image_data, filename, metadata=None):
+    """Upload image to Pinata IPFS"""
+    try:
+        if not PINATA_JWT:
+            print("❌ Pinata JWT not configured")
+            return None
+        
+        # Prepare the file data
+        files = {
+            'file': (filename, image_data, 'image/png')
+        }
+        
+        # Prepare metadata
+        pinata_metadata = {
+            'name': filename,
+            'keyvalues': metadata or {}
+        }
+        
+        headers = {
+            'Authorization': f'Bearer {PINATA_JWT}'
+        }
+        
+        data = {
+            'pinataMetadata': json.dumps(pinata_metadata),
+            'pinataOptions': json.dumps({
+                'cidVersion': 1
+            })
+        }
+        
+        # Upload to Pinata
+        response = requests.post(
+            'https://api.pinata.cloud/pinning/pinFileToIPFS',
+            files=files,
+            data=data,
+            headers=headers
+        )
+        
+        if response.status_code == 200:
+            result = response.json()
+            ipfs_hash = result['IpfsHash']
+            print(f"✅ Image uploaded to IPFS: {ipfs_hash}")
+            return ipfs_hash
+        else:
+            print(f"❌ Failed to upload to Pinata: {response.status_code} - {response.text}")
+            return None
+            
+    except Exception as e:
+        print(f"❌ Error uploading to Pinata: {e}")
+        return None
 
 def load_model():
     """Load the Stable Diffusion model"""
@@ -78,19 +139,20 @@ def load_model():
         
         print("Model loaded successfully!")
 
-def save_image_to_mongodb(user_id, token_id, image_base64, prompt, parameters):
-    """Save generated image to MongoDB"""
+def save_image_metadata_to_mongodb(user_id, token_id, ipfs_hash, prompt, parameters):
+    """Save image metadata to MongoDB (IPFS hash instead of base64 data)"""
     global db
     try:
         if db is None:
             print("❌ MongoDB not connected")
             return False
         
-        # Create the image document
+        # Create the image document with IPFS hash
         image_doc = {
             'userId': user_id,
             'tokenId': token_id,
-            'imageData': image_base64,
+            'ipfsHash': ipfs_hash,
+            'ipfsUrl': f'https://gateway.pinata.cloud/ipfs/{ipfs_hash}',
             'prompt': prompt,
             'parameters': parameters,
             'status': 'completed',
@@ -99,11 +161,11 @@ def save_image_to_mongodb(user_id, token_id, image_base64, prompt, parameters):
         
         # Insert into generatedImages collection
         result = db.generatedImages.insert_one(image_doc)
-        print(f"✅ Image saved to MongoDB with ID: {result.inserted_id}")
+        print(f"✅ Image metadata saved to MongoDB with ID: {result.inserted_id}")
         return True
         
     except Exception as e:
-        print(f"❌ Failed to save image to MongoDB: {e}")
+        print(f"❌ Failed to save image metadata to MongoDB: {e}")
         return False
 
 @app.route('/generate-image', methods=['POST'])
@@ -114,7 +176,7 @@ def generate_image():
         
         # Extract parameters
         prompt = data.get('prompt', '')
-        steps = data.get('steps', 20)
+        steps = 4
         cfg_scale = data.get('cfg_scale', 7.5)
         seed = data.get('seed', None)
         width = data.get('width', 512)
@@ -144,26 +206,36 @@ def generate_image():
         
         image = result.images[0]
         
-        # Save image
+        # Prepare image data for IPFS upload
         image_filename = f"art_token_{token_id}_{uuid.uuid4().hex[:8]}.png"
-        image_path = os.path.join("generated_images", image_filename)
         
-        # Create directory if it doesn't exist
-        os.makedirs("generated_images", exist_ok=True)
-        
-        # Save image
-        image.save(image_path)
-        
-        # Convert to base64 for response
+        # Convert image to bytes for IPFS upload
         buffer = io.BytesIO()
         image.save(buffer, format='PNG')
-        img_str = base64.b64encode(buffer.getvalue()).decode()
+        image_bytes = buffer.getvalue()
         
         print(f"✅ Image generated successfully for token {token_id}")
-        print(f"📁 Saved to: {image_path}")
-        print(f"📏 Image size: {len(img_str)} characters")
+        print(f"📏 Image size: {len(image_bytes)} bytes")
         
-        # Save to MongoDB if user_id is provided
+        # Upload to IPFS via Pinata
+        ipfs_hash = None
+        ipfs_url = None
+        
+        if PINATA_JWT:
+            metadata = {
+                'tokenId': str(token_id),
+                'userId': str(user_id) if user_id else 'anonymous',
+                'prompt': prompt[:50] + '...' if len(prompt) > 50 else prompt
+            }
+            
+            ipfs_hash = upload_to_pinata(image_bytes, image_filename, metadata)
+            if ipfs_hash:
+                ipfs_url = f'https://gateway.pinata.cloud/ipfs/{ipfs_hash}'
+                print(f"🌐 IPFS URL: {ipfs_url}")
+        else:
+            print("⚠️ Pinata JWT not configured, skipping IPFS upload")
+        
+        # Save metadata to MongoDB if user_id is provided
         parameters = {
             'steps': steps,
             'cfg_scale': cfg_scale,
@@ -172,13 +244,14 @@ def generate_image():
             'height': height
         }
         
-        if user_id:
-            save_image_to_mongodb(user_id, token_id, img_str, prompt, parameters)
+        if user_id and ipfs_hash:
+            save_image_metadata_to_mongodb(user_id, token_id, ipfs_hash, prompt, parameters)
         
         return jsonify({
             'success': True,
-            'imageUrl': f'/generated_images/{image_filename}',
-            'imageBase64': f'data:image/png;base64,{img_str}',
+            'ipfsHash': ipfs_hash,
+            'ipfsUrl': ipfs_url,
+            'imageBase64': f'data:image/png;base64,{base64.b64encode(image_bytes).decode()}',
             'tokenId': token_id,
             'prompt': prompt,
             'parameters': parameters
@@ -193,7 +266,7 @@ def generate_image():
 
 @app.route('/generated_images/<filename>')
 def serve_image(filename):
-    """Serve generated images"""
+    """Serve generated images (legacy endpoint - images now stored on IPFS)"""
     try:
         return send_file(f'generated_images/{filename}')
     except FileNotFoundError:
@@ -236,7 +309,8 @@ if __name__ == '__main__':
         'flask',
         'flask-cors',
         'pillow',
-        'pymongo'
+        'pymongo',
+        'requests'
     ]
     
     for package in packages:

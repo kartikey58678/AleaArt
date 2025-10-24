@@ -8,3 +8,4 @@ pillow>=9.5.0
 accelerate>=0.20.0
 # xformers>=0.0.20  # Commented out due to macOS compatibility issues
 pymongo
+python-dotenv

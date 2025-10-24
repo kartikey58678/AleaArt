@@ -45,13 +45,15 @@ export async function GET(request: NextRequest) {
       success: true,
       tokenId: imageEntry.tokenId,
       status: imageEntry.status,
+      ipfsHash: imageEntry.ipfsHash || null,
+      ipfsUrl: imageEntry.ipfsUrl || null,
       imageData: imageEntry.status === 'completed' && imageEntry.imageData ? imageEntry.imageData : null,
       prompt: imageEntry.prompt,
       parameters: imageEntry.parameters,
       createdAt: imageEntry.createdAt
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Image status check error:', error);
     return NextResponse.json(
       { error: 'Failed to check image status' },
@@ -100,7 +102,7 @@ export async function POST(request: NextRequest) {
       images: generatedImages
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Get images error:', error);
     return NextResponse.json(
       { error: 'Failed to get images' },
