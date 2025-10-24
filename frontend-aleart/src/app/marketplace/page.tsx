@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { BrowserProvider } from 'ethers';
+import Navbar from '@/components/Navbar';
 
 interface NFTData {
   tokenId: number;
@@ -24,6 +25,8 @@ export default function Marketplace() {
   const [buyingNFT, setBuyingNFT] = useState<number | null>(null);
   const [walletConnected, setWalletConnected] = useState(false);
   const [userAddress, setUserAddress] = useState<string>('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(8);
 
   useEffect(() => {
     if (status === 'loading') return;
@@ -139,129 +142,144 @@ export default function Marketplace() {
     return new Date(timestamp * 1000).toLocaleDateString();
   };
 
+  // Pagination logic
+  const totalPages = Math.ceil(nfts.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentNFTs = nfts.slice(startIndex, endIndex);
+
   if (status === 'loading' || loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 flex items-center justify-center">
-        <div className="text-white text-xl">Loading marketplace...</div>
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="text-white text-2xl" style={{ fontFamily: 'Poppins, sans-serif', fontWeight: 400 }}>Loading marketplace...</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900">
-      <div className="container mx-auto px-4 py-8">
-        {/* Header */}
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h1 className="text-4xl font-bold text-white mb-2">🎨 AleaArt Marketplace</h1>
-            <p className="text-blue-200">Discover and collect unique AI-generated art NFTs</p>
-          </div>
-          
-          <div className="flex gap-4">
-            {!walletConnected ? (
-              <button
-                onClick={connectWallet}
-                className="bg-gradient-to-r from-blue-500 to-purple-500 text-white px-6 py-3 rounded-lg hover:from-blue-600 hover:to-purple-600 transition-all duration-200 font-medium"
-              >
-                Connect Wallet
-              </button>
-            ) : (
-              <div className="bg-white/10 backdrop-blur-sm rounded-lg px-4 py-2">
-                <p className="text-white text-sm">
-                  {userAddress.slice(0, 6)}...{userAddress.slice(-4)}
-                </p>
-              </div>
-            )}
-            
-            <button
-              onClick={() => router.push('/dashboard')}
-              className="bg-white/10 backdrop-blur-sm text-white px-6 py-3 rounded-lg hover:bg-white/20 transition-all duration-200 font-medium"
-            >
-              Back to Dashboard
-            </button>
-          </div>
-        </div>
-
-        {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-          <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6">
-            <h3 className="text-white text-lg font-semibold mb-2">Total NFTs</h3>
-            <p className="text-3xl font-bold text-blue-300">{nfts.length}</p>
-          </div>
-          <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6">
-            <h3 className="text-white text-lg font-semibold mb-2">For Sale</h3>
-            <p className="text-3xl font-bold text-green-300">
-              {nfts.filter(nft => nft.isForSale).length}
-            </p>
-          </div>
+    <div className="min-h-screen bg-black">
+      <Navbar />
+      
+      <div className="container mx-auto px-4 py-16">
+        {/* Welcome Section */}
+        <div className="text-center mb-24">
+          <h1 className="text-6xl text-white mb-6" style={{ fontFamily: 'Poppins, sans-serif', fontWeight: 400, letterSpacing: '0.05em' }}>
+            Welcome to AleaArt Marketplace
+          </h1>
+          <p className="text-2xl text-gray-300 mb-8" style={{ fontFamily: 'Poppins, sans-serif', fontWeight: 400 }}>
+            Discover and collect unique AI-generated art NFTs
+          </p>
         </div>
 
         {/* NFT Grid */}
         {nfts.length === 0 ? (
-          <div className="text-center py-16">
-            <div className="text-white text-xl mb-4">No NFTs available yet</div>
-            <p className="text-blue-200">Be the first to mint an NFT!</p>
+          <div className="text-center py-20">
+            <div className="text-white text-3xl mb-6" style={{ fontFamily: 'Poppins, sans-serif', fontWeight: 400 }}>No NFTs available yet</div>
+            <p className="text-gray-400 text-xl" style={{ fontFamily: 'Poppins, sans-serif', fontWeight: 400 }}>Be the first to mint an NFT!</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {nfts.map((nft) => (
-              <div key={nft.tokenId} className="bg-white/10 backdrop-blur-sm rounded-xl overflow-hidden border border-white/20 hover:border-white/40 transition-all duration-200">
-                {/* NFT Image */}
-                <div className="aspect-square">
-                  <img
-                    src={`https://gateway.pinata.cloud/ipfs/${nft.ipfsHash}`}
-                    alt={`NFT #${nft.tokenId}`}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-                
-                {/* NFT Info */}
-                <div className="p-4">
-                  <div className="flex justify-between items-start mb-2">
-                    <h3 className="text-white font-semibold">#{nft.tokenId}</h3>
-                    {nft.isForSale && (
-                      <span className="bg-green-500 text-white text-xs px-2 py-1 rounded-full">
-                        For Sale
-                      </span>
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-12 mb-16">
+              {currentNFTs.map((nft) => (
+                <div key={nft.tokenId} className="bg-gray-800 rounded-xl overflow-hidden border border-gray-700 hover:border-yellow-400 transition-all duration-300 hover:scale-105">
+                  {/* NFT Image */}
+                  <div className="aspect-square">
+                    <img
+                      src={`https://gateway.pinata.cloud/ipfs/${nft.ipfsHash}`}
+                      alt={`NFT #${nft.tokenId}`}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  
+                  {/* NFT Info */}
+                  <div className="p-6">
+                    <div className="flex justify-between items-start mb-3">
+                      <h3 className="text-white font-semibold text-lg" style={{ fontFamily: 'Poppins, sans-serif', fontWeight: 600 }}>#{nft.tokenId}</h3>
+                      {nft.isForSale && (
+                        <span className="bg-green-500 text-white text-sm px-3 py-1 rounded-full">
+                          For Sale
+                        </span>
+                      )}
+                    </div>
+                    
+                    <p className="text-gray-300 text-sm mb-4 line-clamp-2" style={{ fontFamily: 'Poppins, sans-serif', fontWeight: 400 }}>
+                      {nft.prompt}
+                    </p>
+                    
+                    <div className="flex justify-between items-center mb-4">
+                      <div>
+                        <p className="text-gray-400 text-sm" style={{ fontFamily: 'Poppins, sans-serif', fontWeight: 400 }}>Price</p>
+                        <p className="text-white font-semibold text-lg" style={{ fontFamily: 'Poppins, sans-serif', fontWeight: 600 }}>
+                          {nft.isForSale ? `${formatPrice(nft.price)} ETH` : 'Not for sale'}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-gray-400 text-sm" style={{ fontFamily: 'Poppins, sans-serif', fontWeight: 400 }}>Created</p>
+                        <p className="text-white text-sm" style={{ fontFamily: 'Poppins, sans-serif', fontWeight: 400 }}>{formatDate(nft.createdAt)}</p>
+                      </div>
+                    </div>
+                    
+                    {/* Action Button */}
+                    {nft.isForSale ? (
+                      <button
+                        onClick={() => buyNFT(nft)}
+                        disabled={buyingNFT === nft.tokenId || nft.owner.toLowerCase() === userAddress.toLowerCase()}
+                        className="w-full border border-yellow-400 text-yellow-400 py-3 px-4 rounded-lg hover:bg-yellow-400 hover:text-black transition-all duration-300 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                        style={{ fontFamily: 'Poppins, sans-serif', fontWeight: 400 }}
+                      >
+                        {buyingNFT === nft.tokenId ? 'Buying...' : 
+                         nft.owner.toLowerCase() === userAddress.toLowerCase() ? 'Your NFT' : 'Buy NFT'}
+                      </button>
+                    ) : (
+                      <div className="w-full bg-gray-600 text-white py-3 px-4 rounded-lg text-center font-medium" style={{ fontFamily: 'Poppins, sans-serif', fontWeight: 400 }}>
+                        Not for Sale
+                      </div>
                     )}
                   </div>
-                  
-                  <p className="text-gray-300 text-sm mb-3 line-clamp-2">
-                    {nft.prompt}
-                  </p>
-                  
-                  <div className="flex justify-between items-center mb-3">
-                    <div>
-                      <p className="text-gray-400 text-xs">Price</p>
-                      <p className="text-white font-semibold">
-                        {nft.isForSale ? `${formatPrice(nft.price)} ETH` : 'Not for sale'}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-gray-400 text-xs">Created</p>
-                      <p className="text-white text-sm">{formatDate(nft.createdAt)}</p>
-                    </div>
-                  </div>
-                  
-                  {/* Action Button */}
-                  {nft.isForSale ? (
-                    <button
-                      onClick={() => buyNFT(nft)}
-                      disabled={buyingNFT === nft.tokenId || nft.owner.toLowerCase() === userAddress.toLowerCase()}
-                      className="w-full bg-gradient-to-r from-green-500 to-blue-500 text-white py-2 px-4 rounded-lg hover:from-green-600 hover:to-blue-600 transition-all duration-200 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {buyingNFT === nft.tokenId ? '⏳ Buying...' : 
-                       nft.owner.toLowerCase() === userAddress.toLowerCase() ? 'Your NFT' : 'Buy NFT'}
-                    </button>
-                  ) : (
-                    <div className="w-full bg-gray-600 text-white py-2 px-4 rounded-lg text-center font-medium">
-                      Not for Sale
-                    </div>
-                  )}
                 </div>
+              ))}
+            </div>
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex justify-center items-center space-x-4">
+                <button
+                  onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                  disabled={currentPage === 1}
+                  className="border border-gray-600 text-gray-300 px-4 py-2 rounded-lg hover:border-yellow-400 hover:text-yellow-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  style={{ fontFamily: 'Poppins, sans-serif', fontWeight: 400 }}
+                >
+                  Previous
+                </button>
+                
+                <div className="flex space-x-2">
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                    <button
+                      key={page}
+                      onClick={() => setCurrentPage(page)}
+                      className={`px-4 py-2 rounded-lg transition-colors ${
+                        currentPage === page
+                          ? 'bg-yellow-400 text-black'
+                          : 'border border-gray-600 text-gray-300 hover:border-yellow-400 hover:text-yellow-400'
+                      }`}
+                      style={{ fontFamily: 'Poppins, sans-serif', fontWeight: 400 }}
+                    >
+                      {page}
+                    </button>
+                  ))}
+                </div>
+                
+                <button
+                  onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                  disabled={currentPage === totalPages}
+                  className="border border-gray-600 text-gray-300 px-4 py-2 rounded-lg hover:border-yellow-400 hover:text-yellow-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  style={{ fontFamily: 'Poppins, sans-serif', fontWeight: 400 }}
+                >
+                  Next
+                </button>
               </div>
-            ))}
-          </div>
+            )}
+          </>
         )}
       </div>
     </div>
