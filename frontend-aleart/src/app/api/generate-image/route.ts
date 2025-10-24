@@ -115,7 +115,7 @@ export async function POST(request: NextRequest) {
       parameters: artParams
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Image generation error:', error);
     return NextResponse.json(
       { error: 'Failed to generate image' },
