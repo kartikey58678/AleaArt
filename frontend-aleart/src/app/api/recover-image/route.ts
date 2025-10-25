@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Find the generating image entry
-    const imageEntry = user.generatedImages.find(img => img.tokenId === tokenId && img.status === 'generating');
+    const imageEntry = user.generatedImages.find((img: { tokenId: number; status: string }) => img.tokenId === tokenId && img.status === 'generating');
     
     if (!imageEntry) {
       return NextResponse.json({ error: 'No generating image found for this token' }, { status: 404 });

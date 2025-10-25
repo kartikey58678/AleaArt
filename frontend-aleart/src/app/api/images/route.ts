@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import connectDB from '@/lib/mongodb';
 import { MongoClient } from 'mongodb';
+import UserAleart from '@/models/UserAleart';
 
 export async function GET(request: NextRequest) {
   try {
@@ -88,7 +89,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get all generated images for the user
-    const generatedImages = user.generatedImages.map(img => ({
+    const generatedImages = user.generatedImages.map((img: { tokenId: number; status: string; imageData?: string; prompt: string; parameters: unknown; createdAt: Date }) => ({
       tokenId: img.tokenId,
       status: img.status,
       imageData: img.status === 'completed' && img.imageData ? img.imageData : null,

@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if image already exists for this token
-    const existingImage = user.generatedImages.find((img: any) => img.tokenId === tokenId);
+    const existingImage = user.generatedImages.find((img: { tokenId: number; status: string }) => img.tokenId === tokenId);
     if (existingImage && existingImage.status === 'completed') {
       return NextResponse.json({
         success: true,
@@ -152,7 +152,7 @@ export async function POST(request: NextRequest) {
       status: 'generating'
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Image generation error:', error);
     return NextResponse.json(
       { error: 'Failed to start image generation' },
@@ -161,7 +161,17 @@ export async function POST(request: NextRequest) {
   }
 }
 
-async function generateImageAsync(userId: string, tokenId: number, pythonRequest: any) {
+async function generateImageAsync(userId: string, tokenId: number, pythonRequest: {
+  prompt: string;
+  steps: number;
+  cfg_scale: number;
+  seed: number;
+  sampler: string;
+  width: number;
+  height: number;
+  tokenId: number;
+  userId: string;
+}) {
   try {
     console.log(`Starting async image generation for token ${tokenId}`);
     
@@ -193,7 +203,7 @@ async function generateImageAsync(userId: string, tokenId: number, pythonRequest
       const user = await UserAleart.findById(userId);
       
       if (user) {
-        const imageEntry = user.generatedImages.find((img: any) => img.tokenId === tokenId);
+        const imageEntry = user.generatedImages.find((img: { tokenId: number; status: string }) => img.tokenId === tokenId);
         if (imageEntry) {
           // Update with IPFS data instead of base64
           imageEntry.ipfsHash = result.ipfsHash;
@@ -221,7 +231,7 @@ async function generateImageAsync(userId: string, tokenId: number, pythonRequest
       const user = await UserAleart.findById(userId);
       
       if (user) {
-        const imageEntry = user.generatedImages.find((img: any) => img.tokenId === tokenId);
+        const imageEntry = user.generatedImages.find((img: { tokenId: number; status: string }) => img.tokenId === tokenId);
         if (imageEntry) {
           imageEntry.status = 'failed';
           await user.save();
