@@ -1,6 +1,6 @@
 #!/bin/bash
 
-echo "🎨 Starting AleaArt Python Backend (Simplified Version)..."
+echo "🎨 Starting AleaArt Python Backend (Global Installation)..."
 
 # Check if Python is installed
 if ! command -v python3 &> /dev/null; then
@@ -14,26 +14,16 @@ if ! command -v pip3 &> /dev/null; then
     exit 1
 fi
 
-# Create virtual environment if it doesn't exist
-if [ ! -d "venv" ]; then
-    echo "📦 Creating virtual environment..."
-    python3 -m venv venv
-fi
-
-# Activate virtual environment
-echo "🔧 Activating virtual environment..."
-source venv/bin/activate
-
 # Install requirements with better error handling
-echo "📥 Installing Python dependencies..."
-pip install --upgrade pip
+echo "📥 Installing Python dependencies globally..."
+pip3 install --upgrade pip
 
 # Install packages individually to handle errors better
 packages=("torch" "diffusers" "transformers" "scipy" "flask" "flask-cors" "pillow" "pymongo" "python-dotenv")
 
 for package in "${packages[@]}"; do
     echo "Installing $package..."
-    pip install "$package" || echo "⚠️  Failed to install $package, continuing..."
+    pip3 install "$package" || echo "⚠️  Failed to install $package, continuing..."
 done
 
 # Create generated_images directory
@@ -49,5 +39,4 @@ echo ""
 echo "Using simplified backend (runwayml/stable-diffusion-v1-5)"
 echo "Press Ctrl+C to stop the server"
 
-python python_backend_simple.py
-
+python3 python_backend_simple.py
