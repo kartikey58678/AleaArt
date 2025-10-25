@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { BrowserProvider } from 'ethers';
+import { BrowserProvider, ethers } from 'ethers';
 import Navbar from '@/components/Navbar';
 
 interface NFTData {
@@ -17,6 +17,22 @@ interface NFTData {
   createdAt: number;
 }
 
+interface SpotlightData {
+  tokenId: number;
+  owner: string;
+  ipfsHash: string;
+  prompt: string;
+  price: string;
+  isForSale: boolean;
+  creator: string;
+  createdAt: number;
+  spotlightStartTime: number;
+  spotlightDuration: number;
+  isActive: boolean;
+  spotlightEndTime: number;
+  timeRemaining: number;
+}
+
 export default function Marketplace() {
   const { data: session, status } = useSession();
   const router = useRouter();
@@ -27,6 +43,10 @@ export default function Marketplace() {
   const [userAddress, setUserAddress] = useState<string>('');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(8);
+  const [spotlight, setSpotlight] = useState<SpotlightData | null>(null);
+  const [loadingSpotlight, setLoadingSpotlight] = useState(true);
+  const [requestingSpotlight, setRequestingSpotlight] = useState(false);
+  const [canRequestSpotlight, setCanRequestSpotlight] = useState(false);
 
   useEffect(() => {
     if (status === 'loading') return;
@@ -38,6 +58,11 @@ export default function Marketplace() {
     fetchNFTs();
     checkWalletConnection();
   }, [session, status, router]);
+
+  // Fetch spotlight when wallet connection changes
+  useEffect(() => {
+    fetchSpotlight();
+  }, [walletConnected, userAddress]);
 
   const checkWalletConnection = async () => {
     if (typeof window.ethereum !== 'undefined') {
@@ -93,6 +118,85 @@ export default function Marketplace() {
       console.error('Error fetching NFTs:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchSpotlight = async () => {
+    try {
+      setLoadingSpotlight(true);
+      const headers: HeadersInit = {};
+      
+      // Add wallet address to headers if connected
+      if (walletConnected && userAddress) {
+        headers['x-wallet-address'] = userAddress;
+      }
+      
+      const response = await fetch('/api/spotlight', { headers });
+      const data = await response.json();
+      
+      if (data.success) {
+        setSpotlight(data.spotlight);
+        setCanRequestSpotlight(data.canRequestSpotlight || false);
+      }
+    } catch (error) {
+      console.error('Error fetching spotlight:', error);
+    } finally {
+      setLoadingSpotlight(false);
+    }
+  };
+
+  const requestSpotlight = async () => {
+    if (!walletConnected) {
+      alert('Please connect your wallet first!');
+      return;
+    }
+
+    try {
+      setRequestingSpotlight(true);
+      
+      const response = await fetch('/api/request-spotlight', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userAddress: userAddress,
+        }),
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        // Create contract instance with user's signer
+        const provider = new BrowserProvider(window.ethereum!);
+        const signer = await provider.getSigner();
+        const contract = new ethers.Contract(data.contractAddress, data.contractABI, signer);
+        
+        // Call the requestSpotlight function with ETH value
+        const tx = await contract.requestSpotlight({ value: data.value });
+        
+        console.log('Spotlight request transaction sent:', tx.hash);
+        
+        // Wait for transaction confirmation
+        const receipt = await tx.wait();
+        
+        console.log('Transaction confirmed:', receipt);
+        
+        alert(`Spotlight request submitted! Transaction: ${tx.hash}\nA random NFT will be selected and featured for 24 hours.`);
+        
+        // Refresh spotlight after a delay to allow for processing
+        setTimeout(() => {
+          fetchSpotlight();
+        }, 10000);
+        
+      } else {
+        alert(`Failed to request spotlight: ${data.error}`);
+      }
+    } catch (error) {
+      console.error('Error requesting spotlight:', error);
+      alert('Error requesting spotlight. Please try again.');
+    } finally {
+      setRequestingSpotlight(false);
     }
   };
 
@@ -169,6 +273,111 @@ export default function Marketplace() {
           <p className="text-2xl text-gray-300 mb-8" style={{ fontFamily: 'Poppins, sans-serif', fontWeight: 400 }}>
             Discover and collect unique AI-generated art NFTs
           </p>
+        </div>
+
+        {/* Spotlight Section */}
+        <div className="mb-20">
+          <div className="flex justify-between items-center mb-8">
+            <h2 className="text-3xl font-semibold text-white" style={{ fontFamily: 'Poppins, sans-serif', fontWeight: 600 }}>Spotlight</h2>
+            {canRequestSpotlight && (
+              <button
+                onClick={requestSpotlight}
+                disabled={!walletConnected || requestingSpotlight}
+                className="border border-yellow-400 text-yellow-400 px-6 py-3 rounded-lg hover:bg-yellow-400 hover:text-black transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{ fontFamily: 'Poppins, sans-serif', fontWeight: 400 }}
+              >
+                {requestingSpotlight ? 'Requesting...' : 'Request New Spotlight'}
+              </button>
+            )}
+          </div>
+          
+          {loadingSpotlight ? (
+            <div className="bg-gray-800 rounded-xl p-12 text-center border border-gray-700">
+              <div className="text-white text-xl" style={{ fontFamily: 'Poppins, sans-serif', fontWeight: 400 }}>Loading spotlight...</div>
+            </div>
+          ) : spotlight ? (
+            <div className="bg-gradient-to-r from-yellow-400/20 to-orange-400/20 rounded-xl p-6 border border-yellow-400/30">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center space-x-3">
+                  <div className="bg-yellow-400 text-black px-3 py-1 rounded-full text-sm font-bold" style={{ fontFamily: 'Poppins, sans-serif', fontWeight: 600 }}>
+                    FEATURED
+                  </div>
+                  <div className="text-yellow-400 text-sm" style={{ fontFamily: 'Poppins, sans-serif', fontWeight: 400 }}>
+                    {Math.floor(spotlight.timeRemaining / 3600)}h {Math.floor((spotlight.timeRemaining % 3600) / 60)}m remaining
+                  </div>
+                </div>
+                <div className="text-gray-300 text-sm" style={{ fontFamily: 'Poppins, sans-serif', fontWeight: 400 }}>
+                  Token #{spotlight.tokenId}
+                </div>
+              </div>
+              
+              <div className="grid md:grid-cols-2 gap-6">
+                <div className="aspect-square max-w-md mx-auto">
+                  <img
+                    src={`https://gateway.pinata.cloud/ipfs/${spotlight.ipfsHash}`}
+                    alt={`Spotlight NFT #${spotlight.tokenId}`}
+                    className="w-full h-full object-cover rounded-lg"
+                  />
+                </div>
+                
+                <div className="flex flex-col justify-center">
+                  <h3 className="text-white text-xl font-bold mb-3" style={{ fontFamily: 'Poppins, sans-serif', fontWeight: 600 }}>
+                    Featured Artwork
+                  </h3>
+                  
+                  <p className="text-gray-300 text-base mb-4 leading-relaxed" style={{ fontFamily: 'Poppins, sans-serif', fontWeight: 400 }}>
+                    {spotlight.prompt}
+                  </p>
+                  
+                  <div className="space-y-2 mb-4">
+                    <div className="flex justify-between">
+                      <span className="text-gray-400 text-sm" style={{ fontFamily: 'Poppins, sans-serif', fontWeight: 400 }}>Owner:</span>
+                      <span className="text-white text-sm" style={{ fontFamily: 'Poppins, sans-serif', fontWeight: 400 }}>
+                        {spotlight.owner.slice(0, 6)}...{spotlight.owner.slice(-4)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-400 text-sm" style={{ fontFamily: 'Poppins, sans-serif', fontWeight: 400 }}>Creator:</span>
+                      <span className="text-white text-sm" style={{ fontFamily: 'Poppins, sans-serif', fontWeight: 400 }}>
+                        {spotlight.creator.slice(0, 6)}...{spotlight.creator.slice(-4)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-400 text-sm" style={{ fontFamily: 'Poppins, sans-serif', fontWeight: 400 }}>Price:</span>
+                      <span className="text-white font-semibold text-sm" style={{ fontFamily: 'Poppins, sans-serif', fontWeight: 600 }}>
+                        {spotlight.isForSale ? `${formatPrice(spotlight.price)} ETH` : 'Not for sale'}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-400 text-sm" style={{ fontFamily: 'Poppins, sans-serif', fontWeight: 400 }}>Created:</span>
+                      <span className="text-white text-sm" style={{ fontFamily: 'Poppins, sans-serif', fontWeight: 400 }}>
+                        {formatDate(spotlight.createdAt)}
+                      </span>
+                    </div>
+                  </div>
+                  
+                  {spotlight.isForSale && (
+                    <button
+                      onClick={() => buyNFT(spotlight)}
+                      disabled={buyingNFT === spotlight.tokenId || spotlight.owner.toLowerCase() === userAddress.toLowerCase()}
+                      className="w-full border border-yellow-400 text-yellow-400 py-2 px-4 rounded-lg hover:bg-yellow-400 hover:text-black transition-all duration-300 font-medium disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                      style={{ fontFamily: 'Poppins, sans-serif', fontWeight: 400 }}
+                    >
+                      {buyingNFT === spotlight.tokenId ? 'Buying...' : 
+                       spotlight.owner.toLowerCase() === userAddress.toLowerCase() ? 'Your NFT' : 'Buy NFT'}
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="bg-gray-800 rounded-xl p-12 text-center border border-gray-700">
+              <div className="text-gray-300 text-xl mb-4" style={{ fontFamily: 'Poppins, sans-serif', fontWeight: 400 }}>No spotlight active</div>
+              <p className="text-gray-400 text-lg" style={{ fontFamily: 'Poppins, sans-serif', fontWeight: 400 }}>
+                Request a new spotlight to feature a random NFT for 24 hours
+              </p>
+            </div>
+          )}
         </div>
 
         {/* NFT Grid */}

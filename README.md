@@ -9,6 +9,7 @@ AleaArt is a decentralized platform that generates unique art parameters using o
 - **AI Image Generation**: Creates stunning images using Stable Diffusion models
 - **NFT Minting**: Convert generated art into tradeable NFTs on Arbitrum Sepolia
 - **Decentralized Marketplace**: Buy and sell NFTs directly peer-to-peer
+- **Spotlight Feature**: Randomly select and feature NFT holders using Pyth Entropy
 - **IPFS Storage**: Images stored on decentralized IPFS network via Pinata
 - **User Authentication**: Secure login/signup with NextAuth.js
 - **Wallet Integration**: MetaMask connection for blockchain interactions
@@ -20,7 +21,8 @@ AleaArt is a decentralized platform that generates unique art parameters using o
 
 ### EntropyArtParamsV2 Contract
 **Address**: `0x420D121aE08007Ef0A66E67D5D7BfFdC98AbECF0`  
-**Network**: Arbitrum Sepolia
+**Network**: Arbitrum Sepolia  
+**Location**: `contracts/EntropyArtParamsV2.sol`
 
 The core contract that leverages **Pyth Entropy V2** to generate deterministic art parameters:
 
@@ -35,7 +37,8 @@ The core contract that leverages **Pyth Entropy V2** to generate deterministic a
 
 ### AleaArtNFT Contract
 **Address**: `0x806019F8a33A01a4A3fea93320601cC77B6Dcb79`  
-**Network**: Arbitrum Sepolia
+**Network**: Arbitrum Sepolia  
+**Location**: `contracts/AleaArtNFT.sol`
 
 The NFT marketplace contract enabling art trading:
 
@@ -46,6 +49,20 @@ The NFT marketplace contract enabling art trading:
 - **Ownership Tracking**: Tracks both creator and current owner
 - **Direct Payments**: 100% of sale proceeds go to seller (no platform fees)
 - **Sale Status**: Enable/disable NFTs for sale
+
+### SpotlightSelector Contract
+**Address**: `0xd596C7C17331013C85c791092247e33267d9291e`  
+**Network**: Arbitrum Sepolia  
+**Location**: `contracts/SpotlightSelector.sol`
+
+The spotlight feature contract for random NFT selection:
+
+- **Random Selection**: Uses Pyth Entropy to randomly select NFT holders
+- **Spotlight Duration**: Features selected NFT for 24 hours (configurable)
+- **Fee System**: Requires 0.001 ETH fee to request new spotlight
+- **Automatic Expiry**: Spotlight automatically expires after duration
+- **Fair Selection**: Truly random selection from all available NFTs
+- **Event Tracking**: Emits events for spotlight requests and selections
 
 ### Contract Functions Overview
 
@@ -62,6 +79,14 @@ The NFT marketplace contract enabling art trading:
 - `setSaleStatus(tokenId, isForSale)` - Enable/disable for sale
 - `getAllNFTs()` - Get all minted NFTs
 - `getNFTsForSale()` - Get NFTs currently for sale
+
+#### SpotlightSelector:
+- `requestSpotlight()` - Request new spotlight selection (costs 0.001 ETH)
+- `getCurrentSpotlight()` - Get current active spotlight
+- `isSpotlightActive(spotlightId)` - Check if spotlight is active
+- `getSpotlight(spotlightId)` - Get spotlight by ID
+- `setSpotlightDuration(duration)` - Update spotlight duration (owner only)
+- `setSpotlightFee(fee)` - Update spotlight fee (owner only)
 
 ## 🏗️ Architecture
 
@@ -92,7 +117,8 @@ The NFT marketplace contract enabling art trading:
 3. **Create Art**: AI generates unique image using Stable Diffusion
 4. **Mint NFT**: Convert art to tradeable NFT with custom price
 5. **Trade**: Buy/sell NFTs in the decentralized marketplace
-6. **Own**: Full ownership and control of your digital art
+6. **Spotlight**: Request spotlight to randomly feature NFT holders (0.001 ETH)
+7. **Own**: Full ownership and control of your digital art
 
 ## 💰 Economic Model
 
