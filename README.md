@@ -15,7 +15,6 @@ AleaArt is a decentralized platform that generates unique art parameters using o
 - **Wallet Integration**: MetaMask connection for blockchain interactions
 - **Image Gallery**: Personal gallery to view and manage generated artwork
 - **Real-time Generation**: Asynchronous image generation with status tracking
-- **No Platform Fees**: Direct peer-to-peer trading with 100% proceeds to sellers
 
 ## 🔗 Smart Contracts
 
@@ -88,6 +87,65 @@ The spotlight feature contract for random NFT selection:
 - `setSpotlightDuration(duration)` - Update spotlight duration (owner only)
 - `setSpotlightFee(fee)` - Update spotlight fee (owner only)
 
+
+## 📁 Project Structure
+
+```
+AleaArt/
+├── contracts/                      # Smart Contracts (Solidity)
+│   ├── AleaArtNFT.sol             # NFT marketplace and trading
+│   ├── EntropyArtParamsV2.sol     # Pyth Entropy integration for art parameters
+│   └── SpotlightSelector.sol      # Random NFT selection for spotlight
+│
+├── frontend-aleart/                # Frontend Application (Next.js)
+│   ├── src/
+│   │   ├── app/                    # Next.js app router pages
+│   │   │   ├── page.tsx           # Landing page
+│   │   │   ├── create/            # Art generation page
+│   │   │   ├── marketplace/       # NFT marketplace page
+│   │   │   ├── gallery/           # User gallery page
+│   │   │   └── api/               # API routes
+│   │   │       ├── buy-nft/       # NFT purchase endpoint
+│   │   │       ├── marketplace/   # Market data endpoint
+│   │   │       ├── spotlight/     # Spotlight feature endpoint
+│   │   │       └── ...
+│   │   ├── components/            # React components
+│   │   ├── lib/                   # Utilities (auth, db)
+│   │   ├── models/                # MongoDB models
+│   │   └── types/                 # TypeScript types
+│   ├── public/                    # Static assets
+│   └── package.json               # Node.js dependencies
+│
+├── python_backend.py              # Flask backend for Stable Diffusion
+├── python_backend_macos.py        # macOS-specific backend
+├── python_backend_simple.py       # Simplified backend version
+├── test_async_api.py              # Async API testing
+│
+├── scripts/                       # Deployment scripts
+│   ├── deploy-artParams.ts        # Deploy art params contract
+│   ├── deploy-nft-arbitrum.ts    # Deploy NFT contract
+│   └── deploy-spotlight-arbitrum.ts # Deploy spotlight contract
+│
+├── generated_images/               # Generated artwork storage (local)
+├── artifacts/                     # Compiled contract artifacts
+├── cache/                         # Build cache
+├── hardhat.config.ts              # Hardhat configuration
+│
+├── requirements.txt               # Python dependencies
+├── requirements_macos.txt         # macOS Python dependencies
+├── package.json                   # Root node.js dependencies
+└── README.md                       # This file
+```
+
+### Directory Overview
+
+- **`contracts/`** - Solidity smart contracts that handle on-chain logic, NFT minting, trading, and randomness
+- **`frontend-aleart/`** - Next.js frontend application with TypeScript, Tailwind CSS, and React components
+- **`python_backend*.py`** - Python Flask servers that run Stable Diffusion models to generate AI images
+- **`scripts/`** - Hardhat deployment scripts for deploying contracts to Arbitrum Sepolia
+- **`generated_images/`** - Local storage for generated artwork before IPFS upload
+- **`artifacts/`** - Compiled contract artifacts and build information
+
 ## 🏗️ Architecture
 
 - **Frontend**: Next.js with TypeScript and Tailwind CSS
@@ -120,9 +178,9 @@ The spotlight feature contract for random NFT selection:
 6. **Spotlight**: Request spotlight to randomly feature NFT holders (0.001 ETH)
 7. **Own**: Full ownership and control of your digital art
 
-## 💰 Economic Model
+## Screenshots
 
-- **No Platform Fees**: 100% of NFT sales go to the seller
-- **Gas Costs Only**: Users pay only blockchain transaction fees
-- **Creator Royalties**: Not implemented (sellers keep full proceeds)
-- **Decentralized**: No central authority controlling the platform
+<img width="1000" height="2000" alt="screencapture-aleart-taupe-vercel-app-dashboard-2025-10-26-00_24_24" src="https://github.com/user-attachments/assets/e6273108-14e2-4017-89e1-4cbe3e105cfe" />
+
+<img width="1000" height="2000" alt="screencapture-aleart-taupe-vercel-app-marketplace-2025-10-26-00_24_51" src="https://github.com/user-attachments/assets/e104f59d-6c0c-435f-b348-2c96691143a6" />
+
