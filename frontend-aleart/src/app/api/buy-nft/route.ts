@@ -29,20 +29,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Connect to Arbitrum Sepolia
+    // Connect to Arbitrum Sepolia (read-only provider)
     const provider = new ethers.JsonRpcProvider(ARBITRUM_SEPOLIA_RPC);
-    
-    // Use the buyer's private key (in production, this would be handled client-side)
-    const buyerPrivateKey = process.env.SEPOLIA_PRIVATE_KEY; // For demo purposes
-    if (!buyerPrivateKey) {
-      return NextResponse.json(
-        { error: 'Buyer private key not configured' },
-        { status: 500 }
-      );
-    }
-    
-    const wallet = new ethers.Wallet(buyerPrivateKey, provider);
-    const contract = new ethers.Contract(NFT_CONTRACT_ADDRESS, NFT_CONTRACT_ABI, wallet);
+    const contract = new ethers.Contract(NFT_CONTRACT_ADDRESS, NFT_CONTRACT_ABI, provider);
     
     // Check if NFT is for sale and get current price
     const nftData = await contract.nftData(tokenId);
@@ -59,22 +48,15 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
-    
-    // Call the buyNFT function with the correct price
-    const tx = await contract.buyNFT(tokenId, { value: price });
-    
-    console.log('Buy transaction sent:', tx.hash);
-    
-    // Wait for transaction confirmation
-    const receipt = await tx.wait();
-    
-    console.log('Transaction confirmed:', receipt);
 
+    // Return contract details for client-side execution
     return NextResponse.json({
       success: true,
+      contractAddress: NFT_CONTRACT_ADDRESS,
+      contractABI: NFT_CONTRACT_ABI,
+      value: price,
       tokenId: tokenId,
-      transactionHash: tx.hash,
-      message: 'NFT purchased successfully on Arbitrum Sepolia'
+      message: 'Use these details to execute the transaction from your wallet'
     });
 
   } catch (error: unknown) {

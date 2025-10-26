@@ -224,8 +224,28 @@ export default function Marketplace() {
       const data = await response.json();
       
       if (data.success) {
-        alert(`NFT purchased successfully! Token ID: ${nft.tokenId}`);
-        fetchNFTs(); // Refresh the list
+        // Create contract instance with user's signer
+        const provider = new BrowserProvider(window.ethereum!);
+        const signer = await provider.getSigner();
+        const contract = new ethers.Contract(data.contractAddress, data.contractABI, signer);
+        
+        // Call the buyNFT function with ETH value
+        const tx = await contract.buyNFT(data.tokenId, { value: data.value });
+        
+        console.log('Buy transaction sent:', tx.hash);
+        
+        // Wait for transaction confirmation
+        const receipt = await tx.wait();
+        
+        console.log('Transaction confirmed:', receipt);
+        
+        alert(`NFT purchased successfully! Transaction: ${tx.hash}`);
+        
+        // Refresh the list after a delay to allow for processing
+        setTimeout(() => {
+          fetchNFTs();
+          fetchSpotlight();
+        }, 5000);
       } else {
         alert(`Failed to buy NFT: ${data.error}`);
       }
